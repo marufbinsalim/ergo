@@ -93,7 +93,7 @@ The request body should be a JSON object containing the following fields:
   }
   ```
 
-## Example Request
+## Example of a Successful Request Response
 
 ```json
 {
