@@ -31,12 +31,23 @@ export default async function handler(
     ? parseInt(req.body.items_per_page)
     : 10;
 
+  const created_by = req.body.created_by;
+  const assigned_to = req.body.assigned_to;
+
   const supabase = await createSupbaseClient();
 
   if (isPaginated) {
-    const { count, error: countError } = await supabase
-      .from("users")
+    let countQuery = supabase
+      .from("tasks")
       .select("id", { count: "exact", head: true });
+
+    if (created_by) {
+      countQuery.eq("created_by", created_by);
+    } else if (assigned_to) {
+      countQuery.eq("assigned_to", assigned_to);
+    }
+
+    const { count, error: countError } = await countQuery;
 
     if (countError || !count) {
       return res.status(400).json({ message: countError });
@@ -53,22 +64,28 @@ export default async function handler(
     let start = (page - 1) * items_per_page;
     let end = start + items_per_page - 1;
 
+    console.log("count", count);
     console.log("start", start);
     console.log("end", end);
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .range(start, end);
+    const paginatedQuery = supabase.from("tasks").select("*").range(start, end);
+
+    if (created_by) {
+      paginatedQuery.eq("created_by", created_by);
+    } else if (assigned_to) {
+      paginatedQuery.eq("assigned_to", assigned_to);
+    }
+
+    const { data, error } = await paginatedQuery;
 
     if (error) {
       return res.status(400).json({ message: error.message });
     }
 
     return res.status(200).json({
-      message: "fetched user data!",
+      message: "fetched task data!",
       data: {
-        users: data,
+        tasks: data,
         page: page,
         items_per_page: items_per_page,
         max_pages: max_pages,
@@ -76,16 +93,24 @@ export default async function handler(
     });
   }
 
-  const { data, error } = await supabase.from("users").select("*");
+  const query = supabase.from("tasks").select("*");
+
+  if (created_by) {
+    query.eq("created_by", created_by);
+  } else if (assigned_to) {
+    query.eq("assigned_to", assigned_to);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return res.status(400).json({ message: error.message });
   }
 
   return res.status(200).json({
-    message: "fetched user data!",
+    message: "fetched task data!",
     data: {
-      users: data,
+      tasks: data,
     },
   });
 }
